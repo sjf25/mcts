@@ -2,6 +2,7 @@
 #define NODE_H
 
 #include <vector>
+#include <map>
 #include <random>
 #include <cassert>
 #include <algorithm>
@@ -19,7 +20,6 @@ struct Node {
 	std::vector<Node*> children;
 	std::vector<move_t> avail_moves;
 	Node* parent;
-	//decltype(GameState().current_player()) current_player;
 	decltype(GameState().previous_player()) previous_player;
 
 	std::mt19937 rand_gen;
@@ -41,7 +41,6 @@ struct Node {
 
 	move_t random_new_move() {
 		std::uniform_int_distribution<> dist(0, avail_moves.size()-1);
-		//return dist(rand_gen);
 		return avail_moves[dist(rand_gen)];
 	}
 	
@@ -51,10 +50,8 @@ struct Node {
 	}
 
 	Node<GameState>* select_UCB1() {
-		//assert(bias_param == std::sqrt(2.0));
 		return *std::max_element(children.begin(), children.end(),
 				[this](Node* node_1, Node* node_2) {
-				//[this](Node* node_1, Node* node_2) {
 					return value_UCB1(node_1) < value_UCB1(node_2);
 				});
 	}
@@ -73,15 +70,26 @@ struct Node {
 	}
 	void update_score(const GameState& state) {
 		num_visited++;
-		// TODO: check if correct
-		//num_wins += state.score(current_player);
-		//num_wins += 1.0 - state.score(current_player);
 		num_wins += state.score(previous_player);
 	}
 
 	~Node<GameState>() {
 		for(int i = 0; i < children.size(); i++)
 			delete children[i];
+	}
+	Node<GameState> best_child() {
+		int best_child = 0;
+		int best_num_visited = children[0]->num_visited;
+
+		for(int i = 1; i < children.size(); i++) {
+			if(children[i]->num_visited > best_num_visited) {
+				best_num_visited = children[i]->num_visited;
+				best_child = i;
+			}
+		}
+		Node<GameState>* best_child_node = children[best_child];
+		children.erase(children.begin() + best_child);
+		return best_child_node;
 	}
 	move_t best_move() {
 		int best_child = 0;
@@ -95,6 +103,13 @@ struct Node {
 		}
 		int next_move = children[best_child]->prev_move;
 		return next_move;
+	}
+	std::map<move_t, int> move_counts() {
+		std::map<move_t, int> result;
+		for(Node* child : children) {
+			result[child->prev_move] = child->num_visited;
+		}
+		return result;
 	}
 };
 

@@ -13,10 +13,9 @@ EMSCRIPTEN_BINDINGS(test_class_thing) {
 		.value("P2", HexCell::P2);
 	class_<HexState>("HexState")
 		.constructor<>()
-		.function("currentPlayer", &HexState::current_player)
+		.function("previousPlayer", &HexState::previous_player)
 		.function("options", &HexState::options)
 		.function("makeMove", &HexState::make_move)
-		//.function("make_rand_move", &HexState::make_rand_move)
 		.function("score", &HexState::score)
 		.function("gameDone", &HexState::game_done);
 }
@@ -26,7 +25,6 @@ HexCell HexState::winner_helper(HexCell target, bool seen[][BOARD_SIZE], int i, 
 		bool maximizing_i) const {
 	assert(i >= 0 && j >= 0);
 	assert(i < BOARD_SIZE && j < BOARD_SIZE);
-	//assert(target != HexCell::BLANK);
 	if(seen[i][j])
 		return HexCell::BLANK;
 	if(board[i][j] != target)
@@ -52,14 +50,12 @@ HexCell HexState::winner_helper(HexCell target, bool seen[][BOARD_SIZE], int i, 
 }
 
 HexCell HexState::winner() const {
-	//std::cout << "called winner()\n";
 	bool seen[BOARD_SIZE][BOARD_SIZE] = {};
 	for(int i = 0; i < BOARD_SIZE; i++) {
 		HexCell possible_winner = winner_helper(HexCell::P1, seen, 0, i, true);
 		if(possible_winner != HexCell::BLANK)
 			return possible_winner;
 	}
-	//std::fill(&seen[0][0], &seen[0][0] + sizeof(seen), false);
 	for(int i = 0; i < BOARD_SIZE; i++)
 		for(int j = 0; j < BOARD_SIZE; j++)
 			seen[i][j] = false;
@@ -72,18 +68,15 @@ HexCell HexState::winner() const {
 }
 
 HexState::HexState() {
-	//std::fill(&board[0][0], &board[0][0] + sizeof(board), HexCell::BLANK);
 	for(int i = 0; i < BOARD_SIZE; i++)
 		for(int j = 0; j < BOARD_SIZE; j++)
 			board[i][j] = HexCell::BLANK;
 }
 
-//HexCell HexState::current_player() const { return turn; }
 HexCell HexState::previous_player() const {
 	return turn == HexCell::P1 ? HexCell::P2 : HexCell::P1;
 }
 
-// TODO: add swap ability for second player
 std::vector<int> HexState::options() const {
 	std::vector<int> result;
 	for(int i = 0; i < BOARD_SIZE; i++) {
@@ -108,7 +101,6 @@ void HexState::make_move(int move_to_make) {
 void HexState::make_rand_move(std::mt19937& rand_gen) {
 	auto ops = options();
 	assert(ops.size() > 0);
-	//std::cout << ops.size() << std::endl;
 	std::uniform_int_distribution<> dist(0, ops.size()-1);
 	int idx = ops[dist(rand_gen)];
 	make_move(idx);
@@ -121,20 +113,8 @@ double HexState::score(HexCell player) const {
 	return w == player ? 1.0 : 0.0;
 }
 
-/*
-bool game_done() const {
-	if(winner() == HexCell::BLANK)
-		return false;
-	//return std::none_of(&board[0][0], &board[0][0] + sizeof(board),
-	//			[](HexCell c){ return c == HexCell::BLANK; });
-	return options().size() == 0;
-}
-*/
 // the game can never end in a draw
 bool HexState::game_done() const {
-	//std::cout << options().size() << ", "
-	//	<< (winner() == HexCell::BLANK ? "BLANK\n" : "NOT BLANK\n");
-	//assert(!((options().size() == 0) ^ (winner() != HexCell::BLANK)));
 	assert(!(options().size() == 0) || (winner() != HexCell::BLANK));
 	return winner() != HexCell::BLANK;
 }
